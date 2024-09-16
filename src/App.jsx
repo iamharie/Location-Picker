@@ -7,19 +7,16 @@ import Modal from "./components/Modal.jsx";
 import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
 import logoImg from "./assets/logo.png";
 
-function App() {
-  const modal = useRef();
-  const selectedPlace = useRef();
-  const [pickedPlaces, setPickedPlaces] = useState([]);
-  const [availablePlaces, setAvailablePlaces] = useState([]);
+const storedIds = JSON.parse(localStorage.getItem("selectedPlaces")) || [];
+const storedPlaces = storedIds.map((id) =>
+  AVAILABLE_PLACES.find((place) => place.id === id)
+);
 
-  useEffect(() => {
-    const storedIds = JSON.parse(localStorage.getItem("selectedPlaces")) || [];
-    const storedPlaces = storedIds.map((id) =>
-      AVAILABLE_PLACES.find((place) => place.id === id)
-    );
-    setPickedPlaces(storedPlaces);
-  }, []);
+function App() {
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const selectedPlace = useRef();
+  const [pickedPlaces, setPickedPlaces] = useState(storedPlaces);
+  const [availablePlaces, setAvailablePlaces] = useState([]);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition((position) => {
@@ -32,26 +29,29 @@ function App() {
     });
   }, []);
 
+  //Opening Modal
   function handleStartRemovePlace(id) {
-    modal.current.open();
+    setModalIsOpen(true);
     selectedPlace.current = id;
   }
 
   function handleStopRemovePlace() {
-    modal.current.close();
+    setModalIsOpen(false);
   }
 
+  //On click: image will get added to empty place component if id does not exist
   function handleSelectPlace(id) {
     setPickedPlaces((prevPickedPlaces) => {
       if (prevPickedPlaces.some((place) => place.id === id)) {
         return prevPickedPlaces;
       }
-      console.log(prevPickedPlaces);
+
       const place = AVAILABLE_PLACES.find((place) => place.id === id);
       return [place, ...prevPickedPlaces];
     });
 
     const storedIds = JSON.parse(localStorage.getItem("selectedPlaces")) || [];
+    console.log([...storedIds, id]);
     if (storedIds.indexOf(id) === -1) {
       localStorage.setItem(
         "selectedPlaces",
@@ -60,21 +60,27 @@ function App() {
     }
   }
 
+  //On click: YES on the modal the place will be removed from pickedPlaces []
   function handleRemovePlace() {
     setPickedPlaces((prevPickedPlaces) =>
       prevPickedPlaces.filter((place) => place.id !== selectedPlace.current)
     );
-    modal.current.close();
+    setModalIsOpen(false);
     const storedIds = JSON.parse(localStorage.getItem("selectedPlaces")) || [];
+
     localStorage.setItem(
       "selectedPlaces",
-      JSON.stringify(storedIds.filter((id) => id !== selectedPlace.current))
+      JSON.stringify(
+        storedIds.filter((id) => {
+          id !== selectedPlace.current;
+        })
+      )
     );
   }
 
   return (
     <>
-      <Modal ref={modal}>
+      <Modal open={modalIsOpen}>
         <DeleteConfirmation
           onCancel={handleStopRemovePlace}
           onConfirm={handleRemovePlace}
